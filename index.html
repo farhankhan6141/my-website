@@ -1,0 +1,268 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Funny Meme 3D Game - Sunset</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<style>
+body{
+ margin:0;overflow:hidden;font-family:Poppins,Arial;
+ background:#000;
+}
+
+/* START SCREEN */
+#startScreen{
+ position:fixed;
+ inset:0;
+ background:linear-gradient(#ff8c42,#6a1b9a);
+ display:flex;
+ flex-direction:column;
+ justify-content:center;
+ align-items:center;
+ z-index:20;
+ color:#fff;
+ text-align:center;
+}
+
+#startScreen h1{
+ font-size:28px;
+ margin-bottom:20px;
+}
+
+#startBtn{
+ padding:14px 40px;
+ font-size:18px;
+ border:2px solid #fff;
+ background:transparent;
+ color:#fff;
+ border-radius:30px;
+ cursor:pointer;
+ transition:all .25s ease;
+}
+
+#startBtn:active{
+ transform:scale(0.9);
+ background:rgba(255,255,255,0.2);
+}
+
+#credit{
+ margin-top:25px;
+ font-size:14px;
+ opacity:0.9;
+}
+
+/* SCORE */
+#score{
+ position:fixed;
+ top:10px;
+ left:10px;
+ color:#fff;
+ font-size:18px;
+ z-index:5;
+ display:none;
+}
+</style>
+</head>
+<body>
+
+<!-- START UI -->
+<div id="startScreen">
+ <h1>😂 Funny Meme 3D Run</h1>
+ <button id="startBtn">START GAME</button>
+ <div id="credit">Create by Farhan</div>
+</div>
+
+<div id="score">Score: 0</div>
+<audio id="meme" preload="auto"></audio>
+
+<script src="https://cdn.jsdelivr.net/npm/three@0.152.2/build/three.min.js"></script>
+<script>
+let gameStarted=false;
+
+/* START BUTTON */
+document.getElementById("startBtn").onclick=()=>{
+ document.getElementById("startScreen").style.display="none";
+ document.getElementById("score").style.display="block";
+ gameStarted=true;
+ meme.play().catch(()=>{});
+};
+
+/* ===== MEME SOUND ===== */
+const memes=[
+ "https://www.myinstants.com/media/sounds/vine-boom.mp3",
+ "https://www.myinstants.com/media/sounds/bruh.mp3",
+ "https://www.myinstants.com/media/sounds/windows-xp-error.mp3"
+];
+const meme=document.getElementById("meme");
+let canPlay=true;
+function playMeme(){
+ if(!canPlay) return;
+ canPlay=false;
+ meme.pause(); meme.currentTime=0;
+ meme.src=memes[Math.floor(Math.random()*memes.length)];
+ meme.volume=0.8;
+ meme.play().catch(()=>{});
+ setTimeout(()=>canPlay=true,400);
+}
+
+/* ===== THREE SCENE ===== */
+const scene=new THREE.Scene();
+
+/* SKY */
+const sky=new THREE.Mesh(
+ new THREE.SphereGeometry(220,32,32),
+ new THREE.ShaderMaterial({
+  side:THREE.BackSide,
+  uniforms:{
+   top:{value:new THREE.Color(0xff8c42)},
+   bottom:{value:new THREE.Color(0x6a1b9a)}
+  },
+  vertexShader:`varying vec3 v;void main(){v=position;gl_Position=projectionMatrix*modelViewMatrix*vec4(position,1.);}`,
+  fragmentShader:`uniform vec3 top;uniform vec3 bottom;varying vec3 v;
+  void main(){float h=normalize(v).y*.5+.5;gl_FragColor=vec4(mix(bottom,top,h),1.);}`
+ })
+);
+scene.add(sky);
+
+/* CAMERA */
+const camera=new THREE.PerspectiveCamera(70,innerWidth/innerHeight,0.1,600);
+camera.position.set(0,6,12);
+camera.lookAt(0,2,-20);
+
+/* RENDER */
+const renderer=new THREE.WebGLRenderer({antialias:true});
+renderer.setSize(innerWidth,innerHeight);
+renderer.setPixelRatio(devicePixelRatio);
+document.body.appendChild(renderer.domElement);
+
+/* LIGHT */
+scene.add(new THREE.HemisphereLight(0xffccaa,0x443322,1));
+const sunLight=new THREE.DirectionalLight(0xffb74d,0.9);
+sunLight.position.set(10,12,10);
+scene.add(sunLight);
+
+/* ROAD */
+const road=new THREE.Mesh(
+ new THREE.BoxGeometry(6,0.1,300),
+ new THREE.MeshStandardMaterial({color:0x3e3e3e})
+);
+road.position.z=-120;
+scene.add(road);
+
+/* GROUND */
+const ground=new THREE.Mesh(
+ new THREE.BoxGeometry(40,0.1,300),
+ new THREE.MeshStandardMaterial({color:0x6d4c41})
+);
+ground.position.set(0,-0.05,-120);
+scene.add(ground);
+
+/* PLAYER */
+const player=new THREE.Mesh(
+ new THREE.BoxGeometry(1.8,1.8,1.8),
+ new THREE.MeshStandardMaterial({color:0xffeb3b})
+);
+player.position.set(0,1,4);
+scene.add(player);
+
+/* FACE */
+function eye(x){
+ const e=new THREE.Mesh(
+  new THREE.CircleGeometry(0.12,16),
+  new THREE.MeshBasicMaterial({color:0x000})
+ );
+ e.position.set(x,0.25,0.91);
+ player.add(e);
+}
+eye(-0.35); eye(0.35);
+
+/* HOUSE */
+function house(x,z){
+ const g=new THREE.Group();
+ const w=new THREE.Mesh(new THREE.BoxGeometry(2.6,2,2.6),
+  new THREE.MeshStandardMaterial({color:0xffcc80}));
+ w.position.y=1; g.add(w);
+ const r=new THREE.Mesh(new THREE.ConeGeometry(2.2,1.2,4),
+  new THREE.MeshStandardMaterial({color:0x8d4035}));
+ r.position.y=2.6; r.rotation.y=Math.PI/4; g.add(r);
+ g.position.set(x,0,z); scene.add(g);
+}
+
+/* TREE */
+function tree(x,z){
+ const t=new THREE.Mesh(new THREE.CylinderGeometry(0.25,0.25,2),
+  new THREE.MeshStandardMaterial({color:0x5d4037}));
+ const l=new THREE.Mesh(new THREE.SphereGeometry(0.9),
+  new THREE.MeshStandardMaterial({color:0x2ecc71}));
+ t.position.set(x,1,z); l.position.set(x,2.6,z);
+ scene.add(t,l);
+}
+
+for(let i=0;i<45;i++){
+ const z=-i*6;
+ house(-7,z);
+ tree(7,z);
+}
+
+/* OBSTACLES */
+const obstacles=[];
+function spawn(){
+ if(!gameStarted) return;
+ const o=new THREE.Mesh(
+  new THREE.BoxGeometry(1.2,1.2,1.2),
+  new THREE.MeshStandardMaterial({color:0xff0000})
+ );
+ o.position.set(0,1,-120);
+ scene.add(o); obstacles.push(o);
+}
+setInterval(spawn,1400);
+
+/* JUMP */
+let vy=0;
+function jump(){
+ if(!gameStarted) return;
+ if(player.position.y<=1.01) vy=0.28;
+}
+addEventListener("touchstart",jump);
+addEventListener("click",jump);
+
+/* SCORE */
+let score=0;
+const scoreEl=document.getElementById("score");
+
+/* LOOP */
+function animate(){
+ requestAnimationFrame(animate);
+ if(!gameStarted){ renderer.render(scene,camera); return; }
+
+ player.position.y+=vy; vy-=0.015;
+ if(player.position.y<1){player.position.y=1;vy=0}
+
+ for(let i=obstacles.length-1;i>=0;i--){
+  const o=obstacles[i];
+  o.position.z+=0.6;
+
+  if(Math.abs(o.position.z-player.position.z)<1 &&
+     Math.abs(o.position.y-player.position.y)<1){
+    alert("Game Over 😜");
+    location.reload();
+  }
+
+  if(o.position.z>camera.position.z){
+    scene.remove(o); obstacles.splice(i,1);
+    score++; scoreEl.innerText="Score: "+score;
+    playMeme();
+  }
+ }
+ renderer.render(scene,camera);
+}
+animate();
+
+onresize=()=>{
+ camera.aspect=innerWidth/innerHeight;
+ camera.updateProjectionMatrix();
+ renderer.setSize(innerWidth,innerHeight);
+};
+</script>
+</body>
+</html>
